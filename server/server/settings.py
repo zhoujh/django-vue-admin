@@ -12,8 +12,10 @@ https://docs.djangoproject.com/en/3.0/ref/settings/
 
 from datetime import datetime, timedelta
 import os
-from . import conf
+import dj_database_url
+from dotenv import load_dotenv
 
+load_dotenv()
 # Build paths inside the project like this: os.path.join(BASE_DIR, ...)
 BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 
@@ -25,7 +27,7 @@ BASE_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 SECRET_KEY = 'ez9z3a4m*$%srn9ve_t71yd!v+&xn9@0k(e(+l6#g1h=e5i4da'
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = conf.DEBUG
+DEBUG = os.getenv('DEBUG', False) == 'True'
 
 ALLOWED_HOSTS = ['*']
 
@@ -82,10 +84,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'server.wsgi.application'
 
-
-# Database
-# https://docs.djangoproject.com/en/3.0/ref/settings/#databases
-DATABASES = conf.DATABASES
 
 # Password validation
 # https://docs.djangoproject.com/en/3.0/ref/settings/#auth-password-validators
@@ -179,16 +177,27 @@ AUTHENTICATION_BACKENDS = (
     'apps.system.authentication.CustomBackend',
 )
 
+
+db_config = dj_database_url.config('DB_URL', 'sqlite:///db.sqlite3')
+if db_config.get('ENGINE') == 'django.db.backends.mysql':
+    db_config['OPTIONS'] = {'charset': 'utf8mb4'}
+# Database
+# https://docs.djangoproject.com/en/4.1/ref/settings/#databases
+DATABASES = {
+    'default': db_config
+}
+
+REDIS_RUL = os.getenv('REDIS_RUL', 'redis://:123456@127.0.0.1:6379/1') == 'True'
 # 缓存配置,使用redis
 CACHES = {
     "default": {
         "BACKEND": "django.core.cache.backends.redis.RedisCache",
-        "LOCATION": "redis://127.0.0.1:6379/1",
+        "LOCATION": REDIS_RUL,
     }
 }
 
 # celery配置,celery正常运行必须安装redis
-CELERY_BROKER_URL = "redis://localhost:6379/0"   # 任务存储
+CELERY_BROKER_URL = "redis://:123456@localhost:6379/0"   # 任务存储
 CELERYD_MAX_TASKS_PER_CHILD = 100  # 每个worker最多执行300个任务就会被销毁，可防止内存泄露
 CELERY_TIMEZONE = 'Asia/Shanghai'  # 设置时区
 CELERY_ENABLE_UTC = True  # 启动时区设置
